@@ -9,7 +9,9 @@ use Saloon\Helpers\Storage;
 use Saloon\Data\RecordedResponse;
 use Saloon\Helpers\FixtureHelper;
 use Saloon\Exceptions\FixtureException;
+use Saloon\Contracts\Body\MergeableBody;
 use Saloon\Exceptions\FixtureMissingException;
+use Saloon\Repositories\Body\StringBodyRepository;
 
 class Fixture
 {
@@ -29,12 +31,18 @@ class Fixture
     protected Storage $storage;
 
     /**
+     * Data to merge in the mocked response.
+     */
+    protected array $merge = [];
+
+    /**
      * Constructor
      */
-    public function __construct(string $name = '', Storage $storage = null)
+    public function __construct(string $name = '', Storage $storage = null, array $merge = [])
     {
         $this->name = $name;
         $this->storage = $storage ?? new Storage(MockConfig::getFixturePath(), true);
+        $this->merge = $merge;
     }
 
     /**
@@ -46,7 +54,25 @@ class Fixture
         $fixturePath = $this->getFixturePath();
 
         if ($storage->exists($fixturePath)) {
-            return RecordedResponse::fromFile($storage->get($fixturePath))->toMockResponse();
+            $response = RecordedResponse::fromFile($storage->get($fixturePath))->toMockResponse();
+
+            if ($response->body() instanceof MergeableBody && is_array($this->merge)) {
+                $response->body()->merge($this->merge);
+
+                return;
+            }
+
+            if ($response->body() instanceof StringBodyRepository && is_array($this->merge)) {
+                try {
+                    $response->body()->set(json_encode(array_merge(
+                        json_decode($response->body()->all() ?: '[]', associative: true, flags: JSON_THROW_ON_ERROR),
+                        $this->merge
+                    )));
+                } catch (\Throwable) {
+                }
+            }
+
+            return $response;
         }
 
         if (MockConfig::isThrowingOnMissingFixtures() === true) {
