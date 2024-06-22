@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Saloon\Tests\Unit;
 
+use Pest\Expectation;
 use Saloon\Data\RecordedResponse;
 use Saloon\Http\Faking\MockClient;
 use Saloon\Http\Faking\MockResponse;
@@ -74,4 +75,19 @@ test('arbitrary data can be merged in the fixture', function () {
         ->name->toBe('Sam Carré')
         ->actualName->toBe('Sam')
         ->twitter->toBe('@carre_sam');
+});
+
+test('arbitrary data using dot-notation can be merged in the fixture', function () {
+    $response = connector()->send(new DTORequest, new MockClient([
+        MockResponse::fixture('users', merge: [
+            'data.0.twitter' => '@jon_doe',
+        ]),
+    ]));
+
+    expect($response->json('data'))
+        ->toHaveCount(2)
+        ->sequence(
+            fn (Expectation $e) => $e->twitter->toBe('@jon_doe'),
+            fn (Expectation $e) => $e->twitter->toBe('@janedoe'),
+        );
 });

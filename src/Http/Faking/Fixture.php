@@ -6,10 +6,10 @@ namespace Saloon\Http\Faking;
 
 use Saloon\MockConfig;
 use Saloon\Helpers\Storage;
+use Saloon\Helpers\ArrayHelpers;
 use Saloon\Data\RecordedResponse;
 use Saloon\Helpers\FixtureHelper;
 use Saloon\Exceptions\FixtureException;
-use Saloon\Contracts\Body\MergeableBody;
 use Saloon\Exceptions\FixtureMissingException;
 use Saloon\Repositories\Body\StringBodyRepository;
 
@@ -56,21 +56,29 @@ class Fixture
         if ($storage->exists($fixturePath)) {
             $response = RecordedResponse::fromFile($storage->get($fixturePath))->toMockResponse();
 
-            if ($response->body() instanceof MergeableBody && is_array($this->merge)) {
-                $response->body()->merge($this->merge);
-
-                return;
+            if (! is_array($this->merge)) {
+                return $response;
             }
 
-            if ($response->body() instanceof StringBodyRepository && is_array($this->merge)) {
-                try {
-                    $response->body()->set(json_encode(array_merge(
-                        json_decode($response->body()->all() ?: '[]', associative: true, flags: JSON_THROW_ON_ERROR),
-                        $this->merge
-                    )));
-                } catch (\Throwable) {
-                }
+            // First, we get the body as an array. If we're dealing with
+            // a `StringBodyRepository`, we have to encode it first.
+            if (! is_array($body = $response->body()->all())) {
+                $body = json_decode($body ?: '[]', associative: true, flags: \JSON_THROW_ON_ERROR);
             }
+
+            // We can then merge the data in the body using
+            // the ArrayHelpers for dot-notation support.
+            foreach ($this->merge as $key => $value) {
+                ArrayHelpers::set($body, $key, $value);
+            }
+
+            // We then set the mutated data back in the repository. If we're dealing
+            // with a `StringBodyRepository`, we need to encode it back to string.
+            $response->body()->set(
+                $response->body() instanceof StringBodyRepository
+                    ? json_encode($body)
+                    : $body
+            );
 
             return $response;
         }
