@@ -38,11 +38,20 @@ class Fixture
     /**
      * Constructor
      */
-    public function __construct(string $name = '', Storage $storage = null, array $merge = [])
+    public function __construct(string $name = '', Storage $storage = null)
     {
         $this->name = $name;
         $this->storage = $storage ?? new Storage(MockConfig::getFixturePath(), true);
+    }
+
+    /**
+     * Specify data to merge with the mock response data.
+     */
+    public function merge(array $merge = []): static
+    {
         $this->merge = $merge;
+
+        return $this;
     }
 
     /**

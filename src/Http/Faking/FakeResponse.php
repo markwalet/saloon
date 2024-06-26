@@ -111,9 +111,9 @@ class FakeResponse implements FakeResponseContract
     /**
      * Create a new mock response from a fixture
      */
-    public static function fixture(string $name, array $merge = []): Fixture
+    public static function fixture(string $name): Fixture
     {
-        return new Fixture($name, merge: $merge);
+        return new Fixture($name);
     }
 
     /**

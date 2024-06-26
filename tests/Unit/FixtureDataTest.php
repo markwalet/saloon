@@ -66,7 +66,7 @@ test('you can json serialize the fixture data or convert it into a file', functi
 
 test('arbitrary data can be merged in the fixture', function () {
     $response = connector()->send(new DTORequest, new MockClient([
-        MockResponse::fixture('user', merge: [
+        MockResponse::fixture('user')->merge([
             'name' => 'Sam Carré',
         ]),
     ]));
@@ -79,7 +79,7 @@ test('arbitrary data can be merged in the fixture', function () {
 
 test('arbitrary data using dot-notation can be merged in the fixture', function () {
     $response = connector()->send(new DTORequest, new MockClient([
-        MockResponse::fixture('users', merge: [
+        MockResponse::fixture('users')->merge([
             'data.0.twitter' => '@jon_doe',
         ]),
     ]));
