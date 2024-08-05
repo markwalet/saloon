@@ -33,7 +33,12 @@ class Fixture
     /**
      * Data to merge in the mocked response.
      */
-    protected array $merge = [];
+    protected ?array $merge = null;
+
+    /**
+     * Closure to modify the returned data with.
+     */
+    protected ?\Closure $through = null;
 
     /**
      * Constructor
@@ -55,6 +60,16 @@ class Fixture
     }
 
     /**
+     * Specify a closure to modify the mock response data with.
+     */
+    public function through(\Closure $through): static
+    {
+        $this->through = $through;
+
+        return $this;
+    }
+
+    /**
      * Attempt to get the mock response from the fixture.
      */
     public function getMockResponse(): ?MockResponse
@@ -65,7 +80,7 @@ class Fixture
         if ($storage->exists($fixturePath)) {
             $response = RecordedResponse::fromFile($storage->get($fixturePath))->toMockResponse();
 
-            if (! is_array($this->merge)) {
+            if (is_null($this->merge) && is_null($this->through)) {
                 return $response;
             }
 
@@ -75,10 +90,18 @@ class Fixture
                 $body = json_decode($body ?: '[]', associative: true, flags: \JSON_THROW_ON_ERROR);
             }
 
-            // We can then merge the data in the body using
+            // We can then merge the data in the body usingthrough
             // the ArrayHelpers for dot-notation support.
-            foreach ($this->merge as $key => $value) {
-                ArrayHelpers::set($body, $key, $value);
+            if (is_array($this->merge)) {
+                foreach ($this->merge as $key => $value) {
+                    ArrayHelpers::set($body, $key, $value);
+                }
+            }
+            
+            // If specified, we pass the body through a function that
+            // may modify the mock response data.
+            if (! is_null($this->through)) {
+                $body = call_user_func($this->through, $body);
             }
 
             // We then set the mutated data back in the repository. If we're dealing

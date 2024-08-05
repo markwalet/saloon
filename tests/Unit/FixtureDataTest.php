@@ -91,3 +91,25 @@ test('arbitrary data using dot-notation can be merged in the fixture', function 
             fn (Expectation $e) => $e->twitter->toBe('@janedoe'),
         );
 });
+
+test('a closure can be used to modify the mock response data', function () {
+    $response = connector()->send(new DTORequest, new MockClient([
+        MockResponse::fixture('users')->through(fn (array $data) => array_merge_recursive($data, [
+            'data' => [
+                [
+                    'name' => 'Sam',
+                    'actual_name' => 'Carré',
+                    'twitter' => '@carre_sam',
+                ],
+            ],
+        ])),
+    ]));
+
+    expect($response->json('data'))
+        ->toHaveCount(3)
+        ->sequence(
+            fn (Expectation $e) => $e->twitter->toBe('@jondoe'),
+            fn (Expectation $e) => $e->twitter->toBe('@janedoe'),
+            fn (Expectation $e) => $e->twitter->toBe('@carre_sam'),
+        );
+});
