@@ -15,6 +15,7 @@ use Saloon\Tests\Fixtures\Requests\AlwaysHasFailureRequest;
 use Saloon\Exceptions\Request\Statuses\UnauthorizedException;
 use Saloon\Exceptions\Request\Statuses\GatewayTimeoutException;
 use Saloon\Exceptions\Request\Statuses\RequestTimeOutException;
+use Saloon\Exceptions\Request\Statuses\PaymentRequiredException;
 use Saloon\Exceptions\Request\Statuses\TooManyRequestsException;
 use Saloon\Exceptions\Request\Statuses\MethodNotAllowedException;
 use Saloon\Exceptions\Request\Statuses\ServiceUnavailableException;
@@ -30,11 +31,12 @@ test('the response will return different exceptions based on status', function (
     $exception = $response->toException();
 
     $message = sprintf('%s (%s) Response: %s', StatusCodeHelper::getMessage($status), $status, $response->body());
-    
+
     expect($exception)->toBeInstanceOf($expectedException);
     expect($exception->getMessage())->toEqual($message);
 })->with([
     [401, UnauthorizedException::class],
+    [402, PaymentRequiredException::class],
     [403, ForbiddenException::class],
     [404, NotFoundException::class],
     [405, MethodNotAllowedException::class],
@@ -45,7 +47,7 @@ test('the response will return different exceptions based on status', function (
     [503, ServiceUnavailableException::class],
     [504, GatewayTimeoutException::class],
     [418, ClientException::class],
-    [402, ClientException::class],
+    [411, ClientException::class],
 ]);
 
 test('when the failed method is customised the response will return ok request exceptions', function (int $status, string $expectedException) {

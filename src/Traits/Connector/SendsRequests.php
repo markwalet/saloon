@@ -26,7 +26,7 @@ trait SendsRequests
      *
      * @param callable(\Throwable, \Saloon\Http\Request): (bool)|null $handleRetry
      */
-    public function send(Request $request, MockClient $mockClient = null, callable $handleRetry = null): Response
+    public function send(Request $request, ?MockClient $mockClient = null, ?callable $handleRetry = null): Response
     {
         if (is_null($handleRetry)) {
             $handleRetry = static fn (): bool => true;
@@ -92,6 +92,11 @@ trait SendsRequests
 
                 $exceptionResponse = $exception instanceof RequestException ? $exception->getResponse() : null;
 
+                // If the exception is a FatalRequestException, we'll execute the fatal pipeline
+                if ($exception instanceof FatalRequestException) {
+                    $exception->getPendingRequest()->executeFatalPipeline($exception);
+                }
+
                 // If we've reached our max attempts - we won't try again, but we'll either
                 // return the last response made or just throw an exception.
 
@@ -121,7 +126,7 @@ trait SendsRequests
     /**
      * Send a request asynchronously
      */
-    public function sendAsync(Request $request, MockClient $mockClient = null): PromiseInterface
+    public function sendAsync(Request $request, ?MockClient $mockClient = null): PromiseInterface
     {
         $sender = $this->sender();
 
@@ -158,7 +163,7 @@ trait SendsRequests
      *
      * @param callable(\Throwable, \Saloon\Http\Request): (bool)|null $handleRetry
      */
-    public function sendAndRetry(Request $request, int $tries, int $interval = 0, callable $handleRetry = null, bool $throw = true, MockClient $mockClient = null, bool $useExponentialBackoff = false): Response
+    public function sendAndRetry(Request $request, int $tries, int $interval = 0, ?callable $handleRetry = null, bool $throw = true, ?MockClient $mockClient = null, bool $useExponentialBackoff = false): Response
     {
         $request->tries = $tries;
         $request->retryInterval = $interval;
@@ -171,7 +176,7 @@ trait SendsRequests
     /**
      * Create a new PendingRequest
      */
-    public function createPendingRequest(Request $request, MockClient $mockClient = null): PendingRequest
+    public function createPendingRequest(Request $request, ?MockClient $mockClient = null): PendingRequest
     {
         return new PendingRequest($this, $request, $mockClient);
     }

@@ -24,7 +24,7 @@ class FixtureHelper
 
         array_walk_recursive($source, static function (&$value, $key) use ($rules, $caseSensitiveKeys) {
             if ($caseSensitiveKeys === false) {
-                $key = mb_strtolower($key);
+                $key = mb_strtolower((string) $key);
             }
 
             if (! array_key_exists($key, $rules)) {

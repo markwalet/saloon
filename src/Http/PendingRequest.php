@@ -23,6 +23,7 @@ use Saloon\Traits\Auth\AuthenticatesRequests;
 use Saloon\Http\Middleware\ValidateProperties;
 use Saloon\Http\Middleware\DetermineMockResponse;
 use Saloon\Exceptions\InvalidResponseClassException;
+use Saloon\Exceptions\Request\FatalRequestException;
 use Saloon\Traits\PendingRequest\ManagesPsrRequests;
 use Saloon\Http\PendingRequest\MergeRequestProperties;
 use Saloon\Http\PendingRequest\BootConnectorAndRequest;
@@ -76,7 +77,7 @@ class PendingRequest
     /**
      * Build up the request payload.
      */
-    public function __construct(Connector $connector, Request $request, MockClient $mockClient = null)
+    public function __construct(Connector $connector, Request $request, ?MockClient $mockClient = null)
     {
         // Let's start by getting our PSR factory collection. This object contains all the
         // relevant factories for creating PSR-7 requests as well as URIs and streams.
@@ -150,6 +151,14 @@ class PendingRequest
     public function executeResponsePipeline(Response $response): Response
     {
         return $this->middleware()->executeResponsePipeline($response);
+    }
+
+    /**
+     * Execute the fatal pipeline.
+     */
+    public function executeFatalPipeline(FatalRequestException $throwable): void
+    {
+        $this->middleware()->executeFatalPipeline($throwable);
     }
 
     /**

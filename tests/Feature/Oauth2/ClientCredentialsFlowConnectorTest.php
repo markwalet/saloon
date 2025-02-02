@@ -10,6 +10,7 @@ use Saloon\Http\Auth\AccessTokenAuthenticator;
 use Saloon\Exceptions\OAuthConfigValidationException;
 use Saloon\Tests\Fixtures\Connectors\ClientCredentialsConnector;
 use Saloon\Tests\Fixtures\Connectors\NoConfigClientCredentialsConnector;
+use Saloon\Tests\Fixtures\Connectors\ClientCredentialsBasicAuthConnector;
 use Saloon\Tests\Fixtures\Connectors\CustomRequestClientCredentialsConnector;
 use Saloon\Tests\Fixtures\Requests\OAuth\CustomClientCredentialsAccessTokenRequest;
 
@@ -195,4 +196,31 @@ test('on the connector you can overwrite the getAccessToken request', function (
     $accessTokenResponse = $connector->getAccessToken(returnResponse: true);
 
     expect($accessTokenResponse->getRequest())->toBeInstanceOf(CustomClientCredentialsAccessTokenRequest::class);
+});
+
+test('the client credentials grant can use basic auth', function () {
+    $mockClient = new MockClient([
+        MockResponse::make(['access_token' => 'access', 'expires_in' => 3600], 200),
+    ]);
+
+    $connector = new ClientCredentialsBasicAuthConnector;
+    $connector->withMockClient($mockClient);
+
+    $authenticator = $connector->getAccessToken();
+
+    expect($authenticator)->toBeInstanceOf(AccessTokenAuthenticator::class);
+    expect($authenticator->getAccessToken())->toEqual('access');
+    expect($authenticator->getRefreshToken())->toBeNull();
+    expect($authenticator->isRefreshable())->toBeFalse();
+    expect($authenticator->getExpiresAt())->toBeInstanceOf(DateTimeImmutable::class);
+
+    $mockClient->assertSentCount(1);
+
+    expect($mockClient->getLastPendingRequest()->body()->all())->toEqual([
+        'grant_type' => 'client_credentials',
+        'scope' => '',
+    ]);
+
+    expect($mockClient->getLastPendingRequest()->headers()->get('Authorization'))
+        ->toEqual('Basic ' . base64_encode('client-id:client-secret'));
 });
